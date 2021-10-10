@@ -34,8 +34,22 @@ contract WavePortal {
 
         waves.push(Wave(msg.sender, block.timestamp, _message)); 
 
+        //emits the event
         emit WaveMe(msg.sender, block.timestamp, _message);
 
+        uint256 prizeAmount = 0.0001 ether;
+
+        //a keyword to check whether something is true. 
+        //a fancy if statement
+        require(
+            prizeAmount <= address(this).balance;
+            "Trying out withdraw more money than the contract has."
+        );
+
+        //send money to the waver
+        (bool success, ) = (msg.sender).call{value: prizeAmount}("");
+        //
+        require(success, "Failed to withdraw money from contract.");
     }
 
     function getAllWaves() public view returns (Wave[] memory){
