@@ -5,60 +5,86 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 
 contract WavePortal {
-
     uint256 totalWaves;
 
-    //create a struct that holds data about each wave
-    struct Wave{
-        address senderAddress;
-        uint256 timeStamp;
+    /*
+     * We will be using this below to help generate a random number
+     */
+    uint256 private seed;
+
+    event NewWave(address indexed from, uint256 timestamp, string message);
+
+    struct Wave {
+        address waver;
         string message;
+        uint256 timestamp;
     }
 
-    //create an array of Waves
     Wave[] waves;
 
-    //define an event
-    event WaveMe(address indexed from, uint256 timeStamp, string message);
+    /*
+     * This is an address => uint mapping, meaning I can associate an address with a number!
+     * In this case, I'll be storing the address with the last time the user waved at us.
+     */
+    mapping(address => uint256) public lastWavedAt;
 
-    //must always have constructor before defining functions for a contract
-    constructor() {
-        console.log("Yo yo, I am a contract and I am smart");
+    constructor() payable {
+        console.log("We have been constructed!");
     }
 
-    //create a function that emits the event
-    function wave(string memory _message) public{
-        totalWaves += 1;
-        
-        console.log("%s has waved at you!", msg.sender);
+    function wave(string memory _message) public {
 
-        waves.push(Wave(msg.sender, block.timestamp, _message)); 
-
-        //emits the event
-        emit WaveMe(msg.sender, block.timestamp, _message);
-
-        uint256 prizeAmount = 0.0001 ether;
-
-        //a keyword to check whether something is true. 
-        //a fancy if statement
+        //make sure user does not wave within 15 minutes of the last wave (less spammy)
         require(
-            prizeAmount <= address(this).balance;
-            "Trying out withdraw more money than the contract has."
+            lastWavedAt[msg.sender] + 15 minutes < block.timestamp,
+            "Wait 15m"
         );
 
-        //send money to the waver
-        (bool success, ) = (msg.sender).call{value: prizeAmount}("");
-        //
-        require(success, "Failed to withdraw money from contract.");
+        //update the timestamp for the current waver
+        lastWavedAt[msg.sender] = block.timestamp;
+
+        totalWaves += 1;
+        console.log("%s has waved!", msg.sender);
+
+        waves.push(Wave(msg.sender, _message, block.timestamp));
+
+        /*
+         * Generate a Psuedo random number between 0 and 100
+         */
+        uint256 randomNumber = (block.difficulty + block.timestamp + seed) % 100;
+        console.log("Random # generated: %s", randomNumber);
+
+        /*
+         * Set the generated, random number as the seed for the next wave
+         */
+        seed = randomNumber;
+
+        /*
+         * Give a 50% chance that the user wins the prize.
+         */
+        if (randomNumber < 50) {
+            console.log("%s won!", msg.sender);
+
+            /*
+             * The same code we had before to send the prize.
+             */
+            uint256 prizeAmount = 0.0001 ether;
+            require(
+                prizeAmount <= address(this).balance,
+                "Trying to withdraw more money than the contract has."
+            );
+            (bool success, ) = (msg.sender).call{value: prizeAmount}("");
+            require(success, "Failed to withdraw money from contract.");
+        }
+
+        emit NewWave(msg.sender, block.timestamp, _message);
     }
 
-    function getAllWaves() public view returns (Wave[] memory){
+    function getAllWaves() public view returns (Wave[] memory) {
         return waves;
     }
 
-    function getTotalWaves() public view returns (uint256){
-        console.log("We have a total of %d waves", totalWaves);
+    function getTotalWaves() public view returns (uint256) {
         return totalWaves;
     }
-    
 }
